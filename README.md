@@ -1,7 +1,8 @@
 # Abseil - C++ Common Libraries
+### Arbitary Business Software Environment Insurement Library
 
 The repository contains the Abseil C++ library code. Abseil is an open-source
-collection of C++ code (compliant to C++14) designed to augment the C++
+collection of C++ code (compliant to C++14, partially C++17) designed to augment the C++
 standard library.
 
 ## Table of Contents
@@ -88,6 +89,10 @@ Abseil contains the following C++ library components:
 * [`flags`](absl/flags/)
   <br /> The `flags` library contains code for handling command line flags for
   libraries and binaries built with Abseil.
+* [`fs`](absl/fs/)
+  <br /> A small and usable class library for comfortly handling filesystems.
+  Uses basic calls to `std::filesystem` for direct interaction with the filesystem.
+  OS-transformed.
 * [`hash`](absl/hash/)
   <br /> The `hash` library contains the hashing framework and default hash
   functor implementations for hashable types in Abseil.
