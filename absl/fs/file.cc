@@ -57,5 +57,17 @@ void File::write( const absl::string_view s,
 }
 
 
+File& File::operator<<( const absl::string_view in ) {
+  this->write( in, std::ios_base::app );
+  return *this;
+}
+
+
+File& File::operator>>( std::string out ) {
+  out.append( this->read( std::ios_base::in ) );
+  return *this;
+}
+
+
 ABSL_NAMESPACE_END
 }  // namespace absl

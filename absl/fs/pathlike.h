@@ -23,7 +23,7 @@
 //   * Concatenating strings and path-like with /   :=  PathLike pl = "C:" / "repositories"
 //   * Representations of paths per operating system:=  Windows with '\\', Unix with '/'
 //   * Further introspection on path elements       :=  "C:/User/My" -> {"C:", "User", "My"}
-//   * 
+//   
 
 #ifndef ABSL_FILES_PATHLIKE_H_
 #define ABSL_FILES_PATHLIKE_H_
@@ -60,22 +60,25 @@ class PathLike
   // is either a directory with files or a file itself.
   path_elements_t path_elements() const;
 
+  // Get a path object that is compatible with StdC++17.
   std::filesystem::path path() const;
 
-  // Gives the representation for the current operating system as string
+  // Gives the representation for the current operating system as string.
   const std::string repr() const;
 
-  // Returns, if it is a valid path on the current operating system
+  // Returns, if it is a valid path on the current operating system.
   bool valid() const;
-  // Returns, if it is a valid path on the current operating system
+  // Returns, if it is a valid path on the current operating system.
   static bool is_valid_path( const PathLike& p );
-  // Returns, if it is a valid path on the current operating system
+  // Returns, if it is a valid path on the current operating system.
   static bool is_valid_path( const std::string& p );
 };
 
-
+// Append a new sublevel `rhs` to the `lhs` path.
 PathLike operator/( const PathLike& lhs, const PathLike& rhs );
+// Append a new sublevel `rhs` to the `lhs` path.
 PathLike operator/( const PathLike& lhs, const std::string& rhs );
+// Append a new sublevel `rhs` to the `lhs` path.
 PathLike operator/( const std::string& lhs, const std::string& rhs );
 
 

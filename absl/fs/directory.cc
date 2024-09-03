@@ -152,5 +152,22 @@ const int DirectoryContent::get_pos() const {
 }
 
 
+bool DirectoryContent::is( const DirectoryContent::Type dct ) const {
+    return static_cast<int>(dct) == this->get_pos();
+}
+
+constexpr auto DirectoryContent::operator<=>(const DirectoryContent& rhs) const {
+    return this->path().repr() <=> rhs.path().repr();
+}
+
+constexpr auto DirectoryContent::operator<=>(const DirectoryContent*rhs) const {
+    return this->path().repr() <=> rhs->path().repr();
+}
+
+DirectoryContent::operator std::basic_string<char, std::char_traits<char>, std::allocator<char>>() const {
+    return this->path().repr();
+}
+
+
 ABSL_NAMESPACE_END
 }  // namespace absl

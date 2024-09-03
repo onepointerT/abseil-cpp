@@ -37,8 +37,13 @@ bool Path::exists() const {
 
 bool Path::copy( PathLike& to_target ) const {
     std::error_code ec;
-    std::filesystem::copy( this->repr(), to_target.repr(), ec );
-    return !ec;
+    if ( std::filesystem::is_directory(to_target.repr())
+      || (this->is_regular_file() && std::filesystem::is_regular_file(to_target.repr()) )
+    ) {
+        std::filesystem::copy( this->repr(), to_target.repr(), ec );
+        return !ec;
+    }
+    return false;
 }
 
 
