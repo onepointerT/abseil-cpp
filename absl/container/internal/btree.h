@@ -1,4 +1,4 @@
-// Copyright 2018 The Abseil Authors.
+// Copyright 2024 The Abseil Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -73,6 +73,16 @@
 
 namespace absl {
 ABSL_NAMESPACE_BEGIN
+
+enum class BTreeSearchAlgorithm : int {
+  standard = 0,
+  bfs = 1,
+  dfs = 2,
+  bfs_then_dfs_on_prefix_match = 3,
+  linear_search = 4,
+  binary_search = 5
+};
+
 namespace container_internal {
 
 #ifdef ABSL_BTREE_ENABLE_GENERATIONS
@@ -206,7 +216,7 @@ struct key_compare_adapter {
   struct checked_compare : checked_compare_base<Compare> {
    private:
     using Base = typename checked_compare::checked_compare_base;
-    using Base::comp;
+    using typename Base::comp;
 
     // If possible, returns whether `t` is equivalent to itself. We can only do
     // this for `Key`s because we can't be sure that it's safe to call
@@ -470,6 +480,15 @@ struct SearchResult {
   bool IsEq() const { return match == MatchKind::kEq; }
 };
 
+
+template <typename V, bool IsCompareTo = false>
+struct TreeSearchResult
+  : public SearchResult< V, IsCompareTo >
+{
+ public:
+  std::vector<unsigned int> tree_path = {0};
+};
+
 // When we don't use CompareTo, `match` is not present.
 // This ensures that callers can't use it accidentally when it provides no
 // useful information.
@@ -497,7 +516,7 @@ class btree_node {
   using original_key_compare = typename Params::original_key_compare;
 
  public:
-  using params_type = Params;
+  using params_type = typename Params;
   using key_type = typename Params::key_type;
   using value_type = typename Params::value_type;
   using pointer = typename Params::pointer;
@@ -528,43 +547,54 @@ class btree_node {
 
   // This class is organized by absl::container_internal::Layout as if it had
   // the following structure:
-  //   // A pointer to the node's parent.
-  //   btree_node *parent;
+  // A pointer to the node's parent.
+  // btree_node* parent;
   //
   //   // When ABSL_BTREE_ENABLE_GENERATIONS is defined, we also have a
   //   // generation integer in order to check that when iterators are
   //   // used, they haven't been invalidated already. Only the generation on
   //   // the root is used, but we have one on each node because whether a node
   //   // is root or not can change.
-  //   uint32_t generation;
+  //uint32_t generation;
   //
   //   // The position of the node in the node's parent.
-  //   field_type position;
+  //field_type position;
   //   // The index of the first populated value in `values`.
   //   // TODO(ezb): right now, `start` is always 0. Update insertion/merge
   //   // logic to allow for floating storage within nodes.
-  //   field_type start;
+  //field_type start;
   //   // The index after the last populated value in `values`. Currently, this
   //   // is the same as the count of values.
-  //   field_type finish;
+  //field_type finish;
   //   // The maximum number of values the node can hold. This is an integer in
   //   // [1, kNodeSlots] for root leaf nodes, kNodeSlots for non-root leaf
   //   // nodes, and kInternalNodeMaxCount (as a sentinel value) for internal
   //   // nodes (even though there are still kNodeSlots values in the node).
   //   // TODO(ezb): make max_count use only 4 bits and record log2(capacity)
   //   // to free extra bits for is_root, etc.
-  //   field_type max_count;
+  //field_type max_count;
   //
   //   // The array of values. The capacity is `max_count` for leaf nodes and
   //   // kNodeSlots for internal nodes. Only the values in
   //   // [start, finish) have been initialized and are valid.
-  //   slot_type values[max_count];
-  //
+  //slot_type values[max_count];
+  
   //   // The array of child pointers. The keys in children[i] are all less
   //   // than key(i). The keys in children[i + 1] are all greater than key(i).
   //   // There are 0 children for leaf nodes and kNodeSlots + 1 children for
   //   // internal nodes.
-  //   btree_node *children[kNodeSlots + 1];
+  // btree_node* children[kNodeSlots + 1];
+
+  size_type children_size() { 
+    return count();
+  }
+
+  btree_node* get_child( size_type pos ) const {
+    if ( pos < this->count() ) {
+      return child(pos);
+    }
+    return nullptr;
+  }
   //
   // This class is only constructed by EmptyNodeType. Normally, pointers to the
   // layout above are allocated, cast to btree_node*, and de-allocated within
@@ -768,6 +798,27 @@ class btree_node {
     c->set_parent(this);
   }
 
+  template <typename K>
+  TreeSearchResult<size_type, is_key_compare_to::value> search(
+    const K &k, const key_compare &comp,
+    BTreeSearchAlgorithm algorithm = BTreeSearchAlgorithm::standard
+  ) const {
+    switch ( algorithm ) {
+      case BTreeSearchAlgorithm::bfs:
+        return breath_first_search(k, comp);
+      case BTreeSearchAlgorithm::dfs:
+        return deep_first_search(k, comp);
+      case BTreeSearchAlgorithm::bfs_then_dfs_on_prefix_match:
+        return breath_first_then_deep_search(k, comp);
+      case BTreeSearchAlgorithm::standard:
+        return breath_first_then_deep_search(k, comp);
+      case BTreeSearchAlgorithm::linear_search:
+        return linear_search(k, comp);
+      case BTreeSearchAlgorithm::binary_search:
+        return binary_search(k, comp);
+    }
+  }
+
   // Returns the position of the first value whose key is not less than k.
   template <typename K>
   SearchResult<size_type, is_key_compare_to::value> lower_bound(
@@ -784,14 +835,32 @@ class btree_node {
   }
 
   template <typename K, typename Compare>
-  SearchResult<size_type, btree_is_key_compare_to<Compare, key_type>::value>
+  TreeSearchResult<size_type, btree_is_key_compare_to<Compare, key_type>::value>
   linear_search(const K &k, const Compare &comp) const {
     return linear_search_impl(k, start(), finish(), comp,
                               btree_is_key_compare_to<Compare, key_type>());
   }
 
+  template<typename K, typename Compare>
+  TreeSearchResult<size_type, btree_is_key_compare_to<Compare, key_type>::value>
+  breath_first_search(const K &k, const Compare &comp) const {
+    return breath_first_search_impl(k, start(), finish(), comp);
+  }
+
+  template<typename K, typename Compare>
+  TreeSearchResult<size_type, btree_is_key_compare_to<Compare, key_type>::value>
+  deep_first_search(const K &k, const Compare &comp) const {
+    return deep_first_search_impl(k, start(), finish(), comp);
+  }
+
+  template<typename K, typename Compare>
+  TreeSearchResult<size_type, btree_is_key_compare_to<Compare, key_type>::value>
+  breath_first_then_deep_search(const K &k, const Compare &comp) const {
+    return breath_first_then_deep_search_impl(k, start(), finish(), comp);
+  }
+
   template <typename K, typename Compare>
-  SearchResult<size_type, btree_is_key_compare_to<Compare, key_type>::value>
+  TreeSearchResult<size_type, btree_is_key_compare_to<Compare, key_type>::value>
   binary_search(const K &k, const Compare &comp) const {
     return binary_search_impl(k, start(), finish(), comp,
                               btree_is_key_compare_to<Compare, key_type>());
@@ -800,7 +869,7 @@ class btree_node {
   // Returns the position of the first value whose key is not less than k using
   // linear search performed using plain compare.
   template <typename K, typename Compare>
-  SearchResult<size_type, false> linear_search_impl(
+  TreeSearchResult<size_type, false> linear_search_impl(
       const K &k, size_type s, const size_type e, const Compare &comp,
       std::false_type /* IsCompareTo */) const {
     while (s < e) {
@@ -809,14 +878,84 @@ class btree_node {
       }
       ++s;
     }
-    return SearchResult<size_type, false>{s};
+    return TreeSearchResult<size_type, false>{s};
+  }
+
+  // Returns the position of the first value whose key is not less or equal than k using
+  // first all child nodes before starting upon their childs
+  template<typename K, typename Compare>
+  TreeSearchResult<size_type, false> breath_first_search_impl(
+    const K &k, size_type s, const size_type e, const Compare &comp
+  ) const {
+    TreeSearchResult<size_type, false> result;
+    for( unsigned int c = s; c < count() && c < e; c++ ) {
+      btree_node* tcn = child(c);
+      if ( comp(tcn.key(0), k) ) {
+        result.tree_path.push_back( c );
+        return result;
+      }
+    }
+    return result;
+  }
+
+  // Returns the position of the first value whose key is not less or equal than k using
+  // first all child nodes and their child nodes beginning before starting upon
+  // the other children of a node
+  template<typename K, typename Compare>
+  TreeSearchResult<size_t, false> deep_first_search_impl(
+    const K &k, size_t s, const size_t e, const Compare &comp
+  ) const {
+    TreeSearchResult<size_t, false> result;
+    for ( unsigned int c = s; c < count() && c < e; c++ ) {
+      btree_node* tcn = this->child(c);
+
+      for ( unsigned int dc = 0; dc < tcn->count(); dc++ ) {
+        btree_node* tccn = tcn->child( dc );
+          if ( comp(tccn.key(0), k) ) {
+            result.tree_path.push_back( c );
+            result.tree_path.push_back( dc );
+            return result;
+          }
+      }
+      return result;
+    }
+  }
+
+  // Returns the position of the first value whose key is not less or equal than k using
+  // first all child nodes before starting upon their childs until a prefix of k is matched
+  // as substring prefix, what then starts a deep_first_search upon the prefix-matching node.
+  template<typename K, typename Compare>
+  TreeSearchResult<size_t, false> breath_first_then_deep_search_impl(
+    const K &k, size_t s, const size_t e, const Compare &comp
+  ) const {
+    TreeSearchResult<size_t, false> result;
+    // Search all children
+    for ( unsigned int c = s; c < this->count() && c < e; c++ ) {
+      btree_node* tcn = this->child(c);
+      // Start a BFS and on prefix match a BFS, but one children level deeper.
+      // Start DFS on complete match and on results upon the key that are beyond
+      // (greater than) equal, a search with the child from before.
+      if ( tcn->key(0).compare(0, 3, k.substr(0, 3)) == 0 || tcn->key(0).compare(0, 2, k.substr(0, 2)) == 0 ) { // Prefix matching
+        result.tree_path.push_back( c );
+        result.tree_path.push_back( tcn->search(k, comp, BTreeSearchAlgorithm::bfs_then_dfs_on_prefix_match).tree_path );
+      } else if ( tcn->key(0) < k ) { // Beyond-the-last fulfilling key
+        result.tree_path.push_back( c-1 ); // Add result to result path
+        tcn = this->child(c-1);
+        result.tree_path.push_back( tcn->search(k, comp, BTreeSearchAlgorithm::bfs_then_dfs_on_prefix_match).tree_path );
+      } else if ( tcn->key(0) > k || tcn->key(0) != k ) { // Won't be equal or prefix-matching
+        continue;
+      } else { // All matches
+        result.tree_path.push_back( tcn->search(k, comp, BTreeSearchAlgorithm::dfs).tree_path );
+      }
+    }
+    return result;
   }
 
   // Returns the position of the first value whose key is not less than k using
   // linear search performed using compare-to.
   template <typename K, typename Compare>
-  SearchResult<size_type, true> linear_search_impl(
-      const K &k, size_type s, const size_type e, const Compare &comp,
+  SearchResult<size_t, true> linear_search_impl(
+      const K &k, size_t s, const size_t e, const Compare &comp,
       std::true_type /* IsCompareTo */) const {
     while (s < e) {
       const absl::weak_ordering c = comp(key(s), k);
@@ -833,31 +972,31 @@ class btree_node {
   // Returns the position of the first value whose key is not less than k using
   // binary search performed using plain compare.
   template <typename K, typename Compare>
-  SearchResult<size_type, false> binary_search_impl(
-      const K &k, size_type s, size_type e, const Compare &comp,
+  SearchResult<size_t, false> binary_search_impl(
+      const K &k, size_t s, size_t e, const Compare &comp,
       std::false_type /* IsCompareTo */) const {
     while (s != e) {
-      const size_type mid = (s + e) >> 1;
+      const size_t mid = (s + e) >> 1;
       if (comp(key(mid), k)) {
         s = mid + 1;
       } else {
         e = mid;
       }
     }
-    return SearchResult<size_type, false>{s};
+    return SearchResult<size_t, false>{s};
   }
 
   // Returns the position of the first value whose key is not less than k using
   // binary search performed using compare-to.
   template <typename K, typename CompareTo>
-  SearchResult<size_type, true> binary_search_impl(
-      const K &k, size_type s, size_type e, const CompareTo &comp,
+  SearchResult<size_t, true> binary_search_impl(
+      const K &k, size_t s, size_t e, const CompareTo &comp,
       std::true_type /* IsCompareTo */) const {
     if (params_type::template can_have_multiple_equivalent_keys<K>()) {
       MatchKind exact_match = MatchKind::kNe;
       while (s != e) {
-        const size_type mid = (s + e) >> 1;
-        const absl::weak_ordering c = comp(key(mid), k);
+        const size_t mid = (s + e) >> 1;
+        const absl::weak_ordering c = comp(this->key(mid), k);
         if (c < 0) {
           s = mid + 1;
         } else {
@@ -873,8 +1012,8 @@ class btree_node {
       return {s, exact_match};
     } else {  // Can't have multiple equivalent keys.
       while (s != e) {
-        const size_type mid = (s + e) >> 1;
-        const absl::weak_ordering c = comp(key(mid), k);
+        const size_t mid = (s + e) >> 1;
+        const absl::weak_ordering c = comp(this->key(mid), k);
         if (c < 0) {
           s = mid + 1;
         } else if (c > 0) {
@@ -1106,9 +1245,9 @@ class btree_iterator : private btree_iterator_generation_info {
   using params_type = typename Node::params_type;
   using is_map_container = typename params_type::is_map_container;
 
-  using node_type = Node;
+  using node_type = typename Node;
   using normal_node = typename std::remove_const<Node>::type;
-  using const_node = const Node;
+  using const_node = const typename Node;
   using normal_pointer = typename params_type::pointer;
   using normal_reference = typename params_type::reference;
   using const_pointer = typename params_type::const_pointer;
@@ -1127,9 +1266,9 @@ class btree_iterator : private btree_iterator_generation_info {
   // These aliases are public for std::iterator_traits.
   using difference_type = typename Node::difference_type;
   using value_type = typename params_type::value_type;
-  using pointer = Pointer;
-  using reference = Reference;
-  using iterator_category = std::bidirectional_iterator_tag;
+  using pointer = typename Pointer;
+  using reference = typename Reference;
+  using iterator_category = typename std::bidirectional_iterator_tag;
 
   btree_iterator() : btree_iterator(nullptr, -1) {}
   explicit btree_iterator(Node *n) : btree_iterator(n, n->start()) {}
@@ -1223,6 +1362,7 @@ class btree_iterator : private btree_iterator_generation_info {
   template <typename TreeType, typename CheckerType>
   friend class base_checker;
   friend struct btree_access;
+  friend struct btree_algorithm;
 
   // This SFINAE allows explicit conversions from const_iterator to
   // iterator, but also avoids hiding the copy constructor.
@@ -1308,7 +1448,7 @@ class btree_iterator : private btree_iterator_generation_info {
 
 template <typename Params>
 class btree {
-  using node_type = btree_node<Params>;
+  using node_type = typename btree_node<Params>;
   using is_key_compare_to = typename Params::is_key_compare_to;
   using field_type = typename node_type::field_type;
 
@@ -1371,12 +1511,12 @@ class btree {
   using iterator =
       typename btree_iterator<node_type, reference, pointer>::iterator;
   using const_iterator = typename iterator::const_iterator;
-  using reverse_iterator = std::reverse_iterator<iterator>;
-  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-  using node_handle_type = node_handle<Params, Params, allocator_type>;
+  using reverse_iterator = typename std::reverse_iterator<iterator>;
+  using const_reverse_iterator = typename std::reverse_iterator<const_iterator>;
+  using node_handle_type = typename node_handle<Params, Params, allocator_type>;
 
   // Internal types made public for use by btree_container types.
-  using params_type = Params;
+  using params_type = typename Params;
   using slot_type = typename Params::slot_type;
 
  private:
@@ -1590,6 +1730,30 @@ class btree {
       } while (n != root());
     }
     return h;
+  }
+
+  // Get a node found with a tree search algorithm
+  node_type* get_from_tree_search_result( const TreeSearchResult<size_t, false>& tsr ) {
+    node_type* node = root();
+    for ( unsigned int tp = 0; tp < tsr.tree_path.size(); tp++ ) {
+      unsigned int node_path = tsr.tree_path.at(tp);
+      node = node.child(node_path);
+    }
+    return node;
+  }
+
+
+  // Search for a key within the btree starting with the root using one of the algorithms
+  // enumerated at BTreeSearchAlgorithm.
+  btree_iterator<node_type, reference, pointer>
+  search( const key_type &k, BTreeSearchAlgorithm algorithm = BTreeSearchAlgorithm::standard ) {
+    // Use the node's faciliated search function with one algorithm out of BTreeSearchAlgorithm
+    TreeSearchResult< size_type, false > tsr = this->root()->search(k, &compare_keys, algorithm);
+    // Get the node from the search result's path like tree-node enumeration vector `tsr.tree_path`
+    node_type* node = this->get_from_tree_search_result(tsr);
+    // Create an iterator an return
+    btree_iterator<node_type, reference, pointer> it(node, node->position());
+    return it;
   }
 
   // The number of internal, leaf and total nodes used by the btree.
@@ -3018,7 +3182,7 @@ struct btree_access {
 
       // The current position to transfer slots to.
       int to_pos = it.position_;
-      node->value_destroy(it.position_, alloc);
+      node.value_destroy(it.position_, alloc);
       while (++it.position_ < node->finish()) {
         it.update_generation();
         if (pred(*it)) {
@@ -3029,7 +3193,7 @@ struct btree_access {
       }
       const int num_deleted = node->finish() - to_pos;
       tree.size_ -= num_deleted;
-      node->set_finish(to_pos);
+      node.set_finish(to_pos);
       it.position_ = to_pos;
       it = tree.rebalance_after_delete(it);
     }

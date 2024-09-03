@@ -20,6 +20,7 @@
 #include <iterator>
 #include <utility>
 
+#include "absl/algorithm/container.h"
 #include "absl/base/attributes.h"
 #include "absl/base/internal/throw_delegate.h"
 #include "absl/container/internal/btree.h"  // IWYU pragma: export
@@ -65,10 +66,32 @@ class btree_container {
   using const_reverse_iterator = typename Tree::const_reverse_iterator;
   using node_type = typename Tree::node_handle_type;
 
+  // TODO: Iterate functions
   struct extract_and_get_next_return_type {
     node_type node;
     iterator next;
   };
+
+  struct TreeIterator
+    : public Tree::iterator
+    , public extract_and_get_next_return_type
+  {
+    public:
+      enum class SearchAlgorithm : int {
+        standard = 0,
+        bfs = 1,
+        bfs_dfs = 2,
+        dfs = 3
+      } algo_search_;
+
+      TreeIterator( iterator pos_it );
+
+      bool next();
+
+      using typename Tree::iterator;
+  };
+
+  using tree_iterator = TreeIterator;
 
   // Constructors/assignments.
   btree_container() : tree_(key_compare(), allocator_type()) {}
@@ -277,7 +300,7 @@ class btree_container {
 // A common base class for btree_set and btree_map.
 template <typename Tree>
 class btree_set_container : public btree_container<Tree> {
-  using super_type = btree_container<Tree>;
+  using super_type = typename btree_container<Tree>;
   using params_type = typename Tree::params_type;
   using init_type = typename params_type::init_type;
   using is_key_compare_to = typename params_type::is_key_compare_to;
@@ -296,7 +319,7 @@ class btree_set_container : public btree_container<Tree> {
   using iterator = typename Tree::iterator;
   using const_iterator = typename Tree::const_iterator;
   using node_type = typename super_type::node_type;
-  using insert_return_type = InsertReturnType<iterator, node_type>;
+  using insert_return_type = typename InsertReturnType<iterator, node_type>;
 
   // Inherit constructors.
   using super_type::super_type;
@@ -443,7 +466,7 @@ class btree_set_container : public btree_container<Tree> {
 // Base class for btree_map.
 template <typename Tree>
 class btree_map_container : public btree_set_container<Tree> {
-  using super_type = btree_set_container<Tree>;
+  using super_type = typename btree_set_container<Tree>;
   using params_type = typename Tree::params_type;
   friend class BtreeNodePeer;
 
@@ -598,7 +621,7 @@ class btree_map_container : public btree_set_container<Tree> {
 // A common base class for btree_multiset and btree_multimap.
 template <typename Tree>
 class btree_multiset_container : public btree_container<Tree> {
-  using super_type = btree_container<Tree>;
+  using super_type = typename btree_container<Tree>;
   using params_type = typename Tree::params_type;
   using init_type = typename params_type::init_type;
   using is_key_compare_to = typename params_type::is_key_compare_to;
@@ -744,7 +767,7 @@ class btree_multiset_container : public btree_container<Tree> {
 // A base class for btree_multimap.
 template <typename Tree>
 class btree_multimap_container : public btree_multiset_container<Tree> {
-  using super_type = btree_multiset_container<Tree>;
+  using super_type = typename btree_multiset_container<Tree>;
   using params_type = typename Tree::params_type;
   friend class BtreeNodePeer;
 

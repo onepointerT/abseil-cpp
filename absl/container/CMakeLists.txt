@@ -43,6 +43,25 @@ absl_cc_library(
     absl::type_traits
 )
 
+absl_cc_library(
+  NAME
+    btree_advanced
+  HDRS
+    "btree_set_subtree.h"
+  SRCS
+  COPTS
+    ${ABSL_DEFAULT_COPTS}
+  LINKOPTS
+    ${ABSL_DEFAULT_LINKOPTS}
+  DEPS
+    absl::btree
+    absl::compare
+    absl::compressed_tuple
+    absl::config
+    absl::string_view
+  PUBLIC
+)
+
 # Internal-only target, do not depend on directly.
 absl_cc_library(
   NAME
@@ -88,12 +107,11 @@ absl_cc_test(
     GTest::gmock_main
 )
 
-# Internal-only target, do not depend on directly.
 absl_cc_library(
   NAME
     compressed_tuple
   HDRS
-    "internal/compressed_tuple.h"
+    "compressed_tuple.h"
   COPTS
     ${ABSL_DEFAULT_COPTS}
   DEPS
@@ -105,7 +123,7 @@ absl_cc_test(
   NAME
     compressed_tuple_test
   SRCS
-    "internal/compressed_tuple_test.cc"
+    "compressed_tuple_test.cc"
   COPTS
     ${ABSL_TEST_COPTS}
   DEPS
@@ -359,6 +377,46 @@ absl_cc_test(
     absl::unordered_set_members_test
     absl::unordered_set_modifiers_test
     GTest::gmock_main
+)
+
+absl_cc_library(
+  NAME
+    key
+  HDRS
+    "key.h"
+    "keyor.h"
+    "internal/key_internal.h"
+    "internal/keyor_internal.h"
+  SRCS
+    "key.cc"
+    "keyor.cc"
+    "internal/key_internal.cc"
+  COPTS
+    ${ABSL_DEFAULT_COPTS}
+  DEPS
+    absl::base
+    absl::atomic_hook
+    absl::config
+    absl::cord
+    absl::core_headers
+    absl::function_ref
+    absl::has_ostream_operator
+    absl::inlined_vector
+    absl::memory
+    absl::no_destructor
+    absl::nullability
+    absl::optional
+    absl::raw_logging_internal
+    absl::span
+    absl::stacktrace
+    absl::strerror
+    absl::str_format
+    absl::strings
+    absl::symbolize
+    absl::type_traits
+    absl::utility
+    absl::variant
+  PUBLIC
 )
 
 absl_cc_library(
