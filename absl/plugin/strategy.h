@@ -35,8 +35,8 @@ ABSL_NAMESPACE_BEGIN
 template< typename property_flags_t >
 class PluginStrategy {
     // Start the strategy with a visitor or hand in the context aswell.
-    virtual bool start( PluginVisitor< property_flags_t >* visitor
-                      , PluginContext< property_flags_t >* ctx = nullptr
+    virtual static bool start( PluginVisitor< property_flags_t >* visitor
+                             , PluginContext< property_flags_t >* ctx = nullptr
     ) {
         if ( ctx != nullptr ) {
             return false;
