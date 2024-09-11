@@ -15,3 +15,9 @@ CMakeLists.txt.user
 # Ignore generated python artifacts
 *.pyc
 copts/__pycache__/
+
+# CMake-in-directory files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake_install
+*.code-workspace
