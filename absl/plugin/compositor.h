@@ -20,7 +20,8 @@
 #ifndef ABSL_PLUGIN_COMPOSITOR_H_
 #define ABSL_PLUGIN_COMPOSITOR_H_
 
-#include <map>
+#include <queue>
+#include <type_traits>
 #include <utility>
 
 #include "absl/base/config.h"
@@ -53,6 +54,8 @@ template< typename property_flags_t >
 class PluginCompositor;
 template< typename property_flags_t >
 class PluginAPI;
+template< typename property_flag_t >
+class PluginStrategy;
 
 
 // A plugin context. Holds a visitor of the kind
@@ -68,7 +71,7 @@ protected:
 
      // Choose strategy with visitor.
      // TODO: Implement virtual function.
-    virtual bool operate_impl() const {
+    virtual bool operate_impl() {
         if ( this->visitor == nullptr ) {
             return false;
         }
@@ -76,8 +79,9 @@ protected:
     }
     // Operate on a specific strategy with visitor.
     // TODO: Implement virtual function.
-    virtual bool operate_strategy( const class strategy_t ) const {
-        return strategy_t::start( visitor, this );
+    template< typename strategy_properties_t >
+    virtual bool operate_strategy( const PluginStrategy< strategy_properties_t >& strategy ) const {
+        return strategy.start( visitor, this );
     }
 
 public:
@@ -92,13 +96,69 @@ public:
     // Start to operate on and with a plugin with the plugin 
     // visitor from the main PluginAPI.
     // Please implement
-    bool operate( PluginVisitor< property_flags_t >* visitor ) {
+    virtual bool operate( PluginVisitor< property_flags_t >* visitor ) {
         this->visitor = visitor;
         return this->operate_impl();
     }
 
     friend class PluginCompositor< property_flags_t >;
     friend class PluginAPI< property_flags_t >;
+};
+
+
+
+template< typename property_flags_t >
+class PluginContextQueue 
+    :   public PluginContext< property_flags_t >
+    ,   protected std::queue< property_flags_t >
+{
+public:
+    PluginContextQueue()
+        :   PluginContext< property_flags_t >()
+        ,   std::queue< property_flags_t >()
+    {}
+
+    typedef typename std::queue< property_flags_t >::iterator iterator;
+    using std::queue< property_flags_t >::begin;
+    using std::queue< property_flags_t >::end;
+    using std::queue< property_flags_t >::size;
+
+    // Start to operate on and with a plugin with the plugin 
+    // visitor from the main PluginAPI.
+    // Please implement
+    virtual bool operate( PluginVisitorQueue< property_flags_t >* visitor ) {
+        this->visitor = visitor;
+        return this->operate_impl();
+    }
+    
+    // Start to operate on and with a plugin with the plugin 
+    // visitor from the main PluginAPI.
+    // Please implement
+    virtual bool operate( PluginVisitor< property_flags_t >* visitor ) {
+        this->visitor = visitor;
+        return this->operate_impl();
+    }
+
+    // Push a property_flags_t object inside the queue
+    bool push( const property_flags_t properties ) {
+        if ( this->visitor != nullptr && std::is_same_v< decltype(this->visitor), PluginVisitor< property_flags_t > >() ) {
+            return false;
+        } else if ( this->visitor != nullptr && std::is_same_v<decltype(this->visitor), PluginVisitorQueue< property_flags_t >>() ) {
+            this->visitor->push( properties );
+        } else {
+            this->push( properties );
+        }
+        return true;
+    }
+
+    // Get the most top property_flags_t object from the queue
+    const property_flags_t pop() {
+        if ( this->visitor != nullptr && std::is_base_of_v< std::queue< property_flags_t >, decltype(this->visitor) >() ) {
+            return this->visitor->pop();
+        } else {
+            return this->pop();
+        }
+    }
 };
 
 

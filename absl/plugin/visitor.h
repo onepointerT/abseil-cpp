@@ -35,12 +35,54 @@ ABSL_NAMESPACE_BEGIN
 // so that the plugin context only needs to decide, which strategy to start.
 template< typename property_flags_t >
 class PluginVisitor
-    :   public property_flags_t
+{
+protected:
+    property_flags_t m_flags;
+    
+    void swap( const property_flags_t flags ) final {
+        m_flags = flags;
+    }
+public:
+    PluginVisitor()
+        :   m_flags( property_flags_t() )
+    {}
+
+    virtual property_flags_t& visit() { return this->flags; }
+    virtual const bool visited() { return true; }
+
+    void reset() final {
+        this->swap( property_flags_t() );
+    }
+};
+
+
+
+
+
+// A plugin visitor with queue. Can reach plugins with some information
+// from `property_flags_t` without changing a bit at the
+// main program's/librarie's and the plugin's execution stack's
+// state. Is normally given from `PluginAPI` to `PluginCompositor`,
+// so that the plugin context only needs to decide, which strategy to start.
+template< typename property_flags_t >
+class PluginVisitorQueue
+    :   public PluginVisitor< property_flags_t >
+    ,   public std::queue< property_flags_t >
 {
 public:
-    PluginVisitor();
+    PluginVisitorQueue();
 
-    
+    // Please call `visited()` when the visitor finished visiting completly.
+    property_flags_t& visit() {
+        this->push( *this );
+        return *this;
+    }
+
+    // Please call `visited()` when the visitor finished visiting completly.
+    const bool visited() {
+        PluginVisitor< property_flags_t >::reset( property_flags_t() );
+    }
+
 };
 
 
