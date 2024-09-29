@@ -147,7 +147,7 @@ Path* DirectoryContent::get_path() const {
 }
 
 
-const int DirectoryContent::get_pos() const {
+int DirectoryContent::get_pos() const {
     return this->get<0>();
 }
 
@@ -156,15 +156,23 @@ bool DirectoryContent::is( const DirectoryContent::Type dct ) const {
     return static_cast<int>(dct) == this->get_pos();
 }
 
-constexpr auto DirectoryContent::operator<=>(const DirectoryContent& rhs) const {
+
+DirectoryContent::Type DirectoryContent::is_type( const DirectoryContent& dc ) {
+    if ( dc.get_pos() > 0 ) {
+        return static_cast<DirectoryContent::Type>( dc.get_pos() );
+    }
+    return DirectoryContent::Type::GenericPath;
+}
+
+auto DirectoryContent::operator<=>(const DirectoryContent& rhs) const {
     return this->path().repr() <=> rhs.path().repr();
 }
 
-constexpr auto DirectoryContent::operator<=>(const DirectoryContent*rhs) const {
+auto DirectoryContent::operator<=>(const DirectoryContent*rhs) const {
     return this->path().repr() <=> rhs->path().repr();
 }
 
-DirectoryContent::operator std::basic_string<char, std::char_traits<char>, std::allocator<char>>() const {
+DirectoryContent::operator std::basic_string<char>() const {
     return this->path().repr();
 }
 

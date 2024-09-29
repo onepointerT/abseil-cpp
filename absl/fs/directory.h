@@ -60,7 +60,7 @@ class DirectoryContent
         Directory = 2,
         GenericPath = 3
     };
-
+    
     // Construct `absl::DirectoryContent` from a `absl::Directory`.
     DirectoryContent( Directory& dir );
     // Construct `absl::DirectoryContent` from a `absl::File`.
@@ -80,19 +80,23 @@ class DirectoryContent
     File* get_file() const;
     // Get a pointer to the `absl::Path` or convert to.
     Path* get_path() const;
-    const int get_pos() const;
+    int get_pos() const;
     
-    // Check, which type of directory content is stored or use a switch-case on
+    // Check, which type of directory content is stored here or use a switch-case on
     // `DirectoryContent::Type` or compate `get_^* != nullptr` with the `get_..`
     // functions above.
     bool is( const DirectoryContent::Type dct ) const;
+    // Check, which type of directory content is stored in parameter `dc` or use a
+    // switch-case on `DirectoryContent::Type` or compate `get_^* != nullptr` with the
+    // `get_..` functions above.
+    static DirectoryContent::Type is_type( const DirectoryContent& dc );
 
     // Used for sorting in `std::set< T >`.
-    constexpr auto operator<=>(const DirectoryContent& rhs) const;
+    auto operator<=>(const DirectoryContent& rhs) const;
     // Used for sorting in `std::set< T* >`.
-    constexpr auto operator<=>(const DirectoryContent*rhs) const;
+    auto operator<=>(const DirectoryContent*rhs) const;
     // Used for key comparator in `std::set< T >`.
-    operator std::basic_string<char, std::char_traits<char>, std::allocator<char>>() const;
+    operator std::basic_string<char>() const;
 };
 
 
