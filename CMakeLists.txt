@@ -70,6 +70,12 @@ else()
   set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 endif()
 
+if( UNIX )
+    add_definitions( -fpermissive )
+elseif( WIN64 )
+    add_definitions( /std:latest /clatest /cpplatest )
+endif()
+
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 include(AbseilDll)

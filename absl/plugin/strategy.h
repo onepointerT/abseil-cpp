@@ -22,7 +22,6 @@
 
 
 #include "absl/base/config.h"
-#include "absl/plugin/visitor.h"
 
 
 namespace absl {
@@ -34,14 +33,28 @@ ABSL_NAMESPACE_BEGIN
 // program) or only operate on the plugin's context.
 template< typename property_flags_t >
 class PluginStrategy {
+public:
     // Start the strategy with a visitor or hand in the context aswell.
-    virtual static bool start( PluginVisitor< property_flags_t >* visitor
-                             , PluginContext< property_flags_t >* ctx = nullptr
+    bool start( PluginVisitor< property_flags_t >* visitor
+                     , PluginContext< property_flags_t >* ctx = nullptr
     ) {
         if ( ctx != nullptr ) {
             return false;
         }
         return false;
+    }
+};
+
+
+
+template< typename property_flags_t >
+class PluginAPIStrategy {
+public:
+    static property_flags_t* start( property_flags_t* properties ) {
+        if ( properties != nullptr ) {
+            return nullptr;
+        }
+        return nullptr;
     }
 };
 

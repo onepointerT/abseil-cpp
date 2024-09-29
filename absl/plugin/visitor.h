@@ -19,9 +19,11 @@
 #define ABSL_PLUGIN_VISITOR_H_
 
 #include <map>
+#include <queue>
 #include <utility>
 
 #include "absl/base/config.h"
+#include "absl/flags/flag_queue.h"
 #include "absl/strings/string_view.h"
 
 namespace absl {
@@ -33,25 +35,28 @@ ABSL_NAMESPACE_BEGIN
 // main program's/librarie's and the plugin's execution stack's
 // state. Is normally given from `PluginAPI` to `PluginCompositor`,
 // so that the plugin context only needs to decide, which strategy to start.
-template< typename property_flags_t >
+template< class property_flags_t >
 class PluginVisitor
 {
 protected:
-    property_flags_t m_flags;
+    property_flags_t* m_flags;
     
-    void swap( const property_flags_t flags ) final {
+    virtual void swap(  property_flags_t* flags ) final {
         m_flags = flags;
     }
 public:
     PluginVisitor()
-        :   m_flags( property_flags_t() )
+        :   m_flags( new property_flags_t() )
     {}
 
-    virtual property_flags_t& visit() { return this->flags; }
-    virtual const bool visited() { return true; }
+    virtual property_flags_t* visit() { return this->m_flags; }
+    virtual bool visited( property_flags_t* property ) {
+        this->m_flags = property;
+        return true;
+    }
 
-    void reset() final {
-        this->swap( property_flags_t() );
+    virtual void reset() final {
+        this->swap( new property_flags_t() );
     }
 };
 
@@ -67,20 +72,16 @@ public:
 template< typename property_flags_t >
 class PluginVisitorQueue
     :   public PluginVisitor< property_flags_t >
-    ,   public std::queue< property_flags_t >
+    ,   public FlagQueue< property_flags_t >
 {
 public:
     PluginVisitorQueue();
 
     // Please call `visited()` when the visitor finished visiting completly.
-    property_flags_t& visit() {
-        this->push( *this );
-        return *this;
-    }
-
-    // Please call `visited()` when the visitor finished visiting completly.
-    const bool visited() {
-        PluginVisitor< property_flags_t >::reset( property_flags_t() );
+    virtual property_flags_t* property_visit( property_flags_t* flags = new property_flags_t() ) {
+        this->push( flags );
+        this->m_flags = flags;
+        return PluginVisitor< property_flags_t >::visit();
     }
 
 };

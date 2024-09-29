@@ -25,6 +25,7 @@
 #include <utility>
 
 #include "absl/base/config.h"
+#include "absl/plugin/context.h"
 #include "absl/plugin/visitor.h"
 #include "absl/strings/string_view.h"
 
@@ -46,119 +47,6 @@ public:
     std::pair< bool, PluginBase* > get_plugin( const std::string name ) const;
     // Register a plugin.
     bool add_plugin( const std::string plugin_name, PluginBase* plugin );
-};
-
-
-
-template< typename property_flags_t >
-class PluginCompositor;
-template< typename property_flags_t >
-class PluginAPI;
-template< typename property_flag_t >
-class PluginStrategy;
-
-
-// A plugin context. Holds a visitor of the kind
-// `PluginVisitor< property_flags_t >`, when visited and needs
-// to implement in specific derived classes, how to send it to a
-// specific plugin strategy and how to choose which strategy of
-// a plugin to execute when the main plugin api (the visitor)
-// arrives.
-template< typename property_flags_t >
-class PluginContext {
-protected:
-    PluginVisitor< property_flags_t >* visitor;
-
-     // Choose strategy with visitor.
-     // TODO: Implement virtual function.
-    virtual bool operate_impl() {
-        if ( this->visitor == nullptr ) {
-            return false;
-        }
-        return false;
-    }
-    // Operate on a specific strategy with visitor.
-    // TODO: Implement virtual function.
-    template< typename strategy_properties_t >
-    virtual bool operate_strategy( const PluginStrategy< strategy_properties_t >& strategy ) const {
-        return strategy.start( visitor, this );
-    }
-
-public:
-    // Initialize a plugin context. The visitor will bring
-    // every guess and properties that are allowed outside
-    // of the main library inside a plugin. Please specify
-    // these common parameters for your implementations.
-    PluginContext()
-        :   visitor( nullptr )
-    {}
-
-    // Start to operate on and with a plugin with the plugin 
-    // visitor from the main PluginAPI.
-    // Please implement
-    virtual bool operate( PluginVisitor< property_flags_t >* visitor ) {
-        this->visitor = visitor;
-        return this->operate_impl();
-    }
-
-    friend class PluginCompositor< property_flags_t >;
-    friend class PluginAPI< property_flags_t >;
-};
-
-
-
-template< typename property_flags_t >
-class PluginContextQueue 
-    :   public PluginContext< property_flags_t >
-    ,   protected std::queue< property_flags_t >
-{
-public:
-    PluginContextQueue()
-        :   PluginContext< property_flags_t >()
-        ,   std::queue< property_flags_t >()
-    {}
-
-    typedef typename std::queue< property_flags_t >::iterator iterator;
-    using std::queue< property_flags_t >::begin;
-    using std::queue< property_flags_t >::end;
-    using std::queue< property_flags_t >::size;
-
-    // Start to operate on and with a plugin with the plugin 
-    // visitor from the main PluginAPI.
-    // Please implement
-    virtual bool operate( PluginVisitorQueue< property_flags_t >* visitor ) {
-        this->visitor = visitor;
-        return this->operate_impl();
-    }
-    
-    // Start to operate on and with a plugin with the plugin 
-    // visitor from the main PluginAPI.
-    // Please implement
-    virtual bool operate( PluginVisitor< property_flags_t >* visitor ) {
-        this->visitor = visitor;
-        return this->operate_impl();
-    }
-
-    // Push a property_flags_t object inside the queue
-    bool push( const property_flags_t properties ) {
-        if ( this->visitor != nullptr && std::is_same_v< decltype(this->visitor), PluginVisitor< property_flags_t > >() ) {
-            return false;
-        } else if ( this->visitor != nullptr && std::is_same_v<decltype(this->visitor), PluginVisitorQueue< property_flags_t >>() ) {
-            this->visitor->push( properties );
-        } else {
-            this->push( properties );
-        }
-        return true;
-    }
-
-    // Get the most top property_flags_t object from the queue
-    const property_flags_t pop() {
-        if ( this->visitor != nullptr && std::is_base_of_v< std::queue< property_flags_t >, decltype(this->visitor) >() ) {
-            return this->visitor->pop();
-        } else {
-            return this->pop();
-        }
-    }
 };
 
 

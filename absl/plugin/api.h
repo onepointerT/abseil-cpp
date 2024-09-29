@@ -23,6 +23,8 @@
 
 #include "absl/base/config.h"
 #include "absl/plugin/compositor.h"
+#include "absl/plugin/context.h"
+#include "absl/plugin/informant.h"
 #include "absl/plugin/visitor.h"
 #include "absl/strings/string_view.h"
 
@@ -44,6 +46,7 @@ class PluginAPI
 protected:
     // The plugin context of the current library.
     PluginContext< property_flags_t >* plugin_ctx;
+    PluginInformant< property_flags_t >* plugin_informant;
 
 public:
     // The name of this plugin api.
@@ -51,16 +54,30 @@ public:
 
     // The name of your plug-inable implementation
     // of the plugin-api and its compositor's strategies.
-    PluginAPI( const std::string name )
-        :   
+    PluginAPI( const std::string name, PluginContext< property_flags_t > ctx = nullptr )
+        :   PluginBase()
+        ,   PluginVisitor< property_flags_t >()
+        ,   plugin_ctx( ctx == nullptr ? new PluginContext< property_flags_t >() : ctx )
     {}
 
     // Load from config, directory, ld-loaded library or similar.
     virtual unsigned int load_plugins() = 0;
 
     // Send the plugin api to operate on the plugin context.
-    virtual bool operate() const {
+    virtual bool operate() {
         return plugin_ctx->operate( this );
+    }
+
+    virtual std::shared_future<property_flags_t*> inform( const std::string strategy_name
+                                                        , property_flags_t* property
+    ) {
+        std::shared_future< property_flags_t* > future
+            = plugin_informant->await_information( property, strategy_name );
+        future.wait();
+        if ( ! future.valid() ) {
+            return std::shared_future<property_flags_t*>();
+        }
+        return future;
     }
 };
 
