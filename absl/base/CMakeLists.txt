@@ -43,6 +43,17 @@ absl_cc_library(
 
 absl_cc_library(
   NAME
+    cast
+  HDRS
+    "cast.h"
+  DEPS
+    absl::config
+  COPTS
+    ${ABSL_DEFAULT_COPTS}
+)
+
+absl_cc_library(
+  NAME
     log_severity
   HDRS
     "log_severity.h"
@@ -161,6 +172,21 @@ absl_cc_library(
 
 absl_cc_library(
   NAME
+    uuid
+  HDRS
+    "uuid.h"
+  SRCS
+    "uuid.cc"
+  COPTS
+    ${ABSL_DEFAULT_COPTS}
+  DEPS
+    absl::config
+    absl::string_view
+  PUBLIC
+)
+
+absl_cc_library(
+  NAME
     core_headers
   HDRS
     "attributes.h"
@@ -169,6 +195,7 @@ absl_cc_library(
     "optimization.h"
     "port.h"
     "thread_annotations.h"
+    "uuid.h"
   COPTS
     ${ABSL_DEFAULT_COPTS}
   DEPS
