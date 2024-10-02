@@ -34,9 +34,11 @@ ABSL_NAMESPACE_BEGIN
 template< typename property_flags_t >
 class PluginStrategy {
 public:
+    PluginStrategy() {}
+
     // Start the strategy with a visitor or hand in the context aswell.
-    bool start( PluginVisitor< property_flags_t >* visitor
-                     , PluginContext< property_flags_t >* ctx = nullptr
+    virtual bool start( PluginVisitor< property_flags_t >* visitor
+                      , PluginContext< property_flags_t >* ctx = nullptr
     ) {
         if ( ctx != nullptr ) {
             return false;
@@ -50,12 +52,11 @@ public:
 template< typename property_flags_t >
 class PluginAPIStrategy {
 public:
-    static property_flags_t* start( property_flags_t* properties ) {
-        if ( properties != nullptr ) {
-            return nullptr;
-        }
-        return nullptr;
-    }
+    PluginAPIStrategy() {}
+
+    // Returns `nullptr` on failure, the modified or unmodified 
+    // `properties` object else.
+    virtual property_flags_t* start( property_flags_t* properties ) { return properties; };
 };
 
 

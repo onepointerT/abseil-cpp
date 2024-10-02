@@ -26,6 +26,7 @@
 
 #include "absl/base/config.h"
 #include "absl/plugin/context.h"
+#include "absl/plugin/strategy.h"
 #include "absl/plugin/visitor.h"
 #include "absl/strings/string_view.h"
 
@@ -33,20 +34,48 @@ namespace absl {
 ABSL_NAMESPACE_BEGIN
 
 
+template< typename property_flags_t >
+class PluginContext;
+
+
 // A basic Plugin class that can hold more than one other named class
 // of this or derived type and is the elementar base class for plugins.
+template< typename property_flags_t >
 class PluginBase
-    :   protected std::map< const absl::string_view, PluginBase* >  // tuples (plugin_name, plugin)
+    :   protected std::map< const absl::string_view, PluginBase< property_flags_t >* >  // tuples (plugin_name, plugin)
+    ,   public PluginContext< property_flags_t >
 {
 
 public:
     // Constructor.
-    PluginBase();
+    PluginBase( PluginStrategy< property_flags_t >* plugin_strategy = nullptr
+              , const std::string api_plugin_name = UUID::generate()
+    )   :   std::map< const absl::string_view, PluginBase* >()
+        ,   PluginContext< property_flags_t >( api_plugin_name, plugin_strategy )
+    {}
+    PluginBase( PluginContext< property_flags_t >* plugin_ctx_impl )
+        :   std::map< const absl::string_view, PluginBase* >()
+        ,   PluginContext< property_flags_t >( plugin_ctx_impl->name_plugin, plugin_ctx_impl->get_strategy() )
+    {}
+
+    // TODO: Load by config
 
     // Get a specific plugin. Returns (false, nullptr) only, when not found.
-    std::pair< bool, PluginBase* > get_plugin( const std::string name ) const;
+    std::pair< bool, PluginBase* > get_plugin( const std::string name ) const {
+        bool is_there = this->contains(name);
+        return std::make_pair(is_there, is_there ? this->at(name) : nullptr );
+    }
     // Register a plugin.
-    bool add_plugin( const std::string plugin_name, PluginBase* plugin );
+    bool add_plugin( const std::string plugin_name, PluginBase* plugin ) {
+        this->at(plugin_name) = plugin;
+        return true;
+    }
+    bool add_plugin( PluginContext< property_flags_t >* plugin_ctx_impl ) {
+        PluginBase< property_flags_t >* plugin_base
+            = new PluginBase< property_flags_t >( plugin_ctx_impl );
+        this->at(plugin_base->name_plugin) = plugin_base;
+        return true;
+    }
 };
 
 
@@ -58,18 +87,35 @@ public:
 // Operate on a `PluginContext< property_flags_t >`.
 template< typename property_flags_t >
 class PluginCompositor
-    :   public PluginBase
+    :   PluginAPIStrategy< property_flags_t >
 {
 protected:
-    const PluginBase* m_myLib_im_plugged_into;
+    // The plugins can cooperate
+    const PluginBase< property_flags_t >* m_myLib_iam_plugged_into;
+    // Each plugin has a context
     PluginContext< property_flags_t >* m_plugin_context;
+    // Each Plugin needs to implement a strategy
+
+    friend class PluginContext< property_flags_t >;
 
 public:
     // Constructor.
-    PluginCompositor( const PluginBase* plug_me_inside_this_lib )
-        :   m_myLib_im_plugged_into( plug_me_inside_this_lib )
+    PluginCompositor( const PluginBase< property_flags_t >* plug_me_inside_this_lib
+                    , PluginContext< property_flags_t >* plugin_ctx
+    )   :   PluginAPIStrategy< property_flags_t >()
+        ,   m_myLib_iam_plugged_into( plug_me_inside_this_lib )
         ,   m_plugin_context( nullptr )
     {}
+
+    virtual property_flags_t* start( property_flags_t* properties ) = 0; /*{
+        // Do things with the plugin's base lib `m_myLib_iam_plugged_into`
+        // Find plugin strategies and operate upon the context with the own properties
+        // Finally call `operate` upon the plugin's own context
+        if ( m_plugin_context->operate( properties ) ) {
+            return properties;
+        }
+        return nullptr;
+    }*/
 };
 
 

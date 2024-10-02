@@ -32,18 +32,20 @@ ABSL_NAMESPACE_BEGIN
 
 template< typename property_flags_t >
 class PluginAPI;
+template< typename property_flags_t >
+class PluginAPIStrategy;
 
 
-template< typename property_flags_t  >
+template< class property_flags_t  >
 class PluginInformant {
 public:
-    friend class property_flags_t;
+    friend class PluginAPIStrategy< property_flags_t >;
     friend class PluginAPI< property_flags_t >;
 
 protected:
     std::map< std::string, PluginAPIStrategy< property_flags_t >* > strategies;
 
-    PluginAPIStrategy< property_flags_t >* get_strategy( const std::string sname ) const {
+    PluginAPIStrategy< property_flags_t >* get_strategy( const std::string sname ) {
         if ( this->strategies.contains(sname) ) {
             return this->strategies.at(sname);
         }

@@ -19,6 +19,7 @@
 #define ABSL_PLUGIN_API_H_
 
 #include <map>
+#include <string>
 #include <utility>
 
 #include "absl/base/config.h"
@@ -40,13 +41,16 @@ ABSL_NAMESPACE_BEGIN
 // that is held by only the main library or the program.
 template< typename property_flags_t >
 class PluginAPI
-    :   public PluginBase
+    :   public PluginBase< property_flags_t >
     ,   public PluginVisitor< property_flags_t >
 {
 protected:
+    typedef std::map< std::string, PluginCompositor< property_flags_t >* > plugin_map_t;
+
     // The plugin context of the current library.
-    PluginContext< property_flags_t >* plugin_ctx;
+    PluginContext< property_flags_t >* plugin_api_ctx;
     PluginInformant< property_flags_t >* plugin_informant;
+    plugin_map_t plugin_map;
 
 public:
     // The name of this plugin api.
@@ -55,24 +59,60 @@ public:
     // The name of your plug-inable implementation
     // of the plugin-api and its compositor's strategies.
     PluginAPI( const std::string name, PluginContext< property_flags_t > ctx = nullptr )
-        :   PluginBase()
+        :   PluginBase< property_flags_t >( ctx, name )
         ,   PluginVisitor< property_flags_t >()
-        ,   plugin_ctx( ctx == nullptr ? new PluginContext< property_flags_t >() : ctx )
+        ,   plugin_api_ctx( new PluginContext< property_flags_t >(name) )
+        ,   plugin_map()
     {}
 
-    // Load from config, directory, ld-loaded library or similar.
-    virtual unsigned int load_plugins() = 0;
+    // Register a plugin implementation
+    virtual bool plugin_add( const PluginContext< property_flags_t >* plugin_ctx ) {
+        if ( plugin_ctx == nullptr ) {
+            return false;
+        }
+        this->add_plugin( plugin_ctx );
+        return true;
+    }
+
+    // Load from config, directory, loaded plugin library and its compositors or similar.
+    virtual unsigned int load_plugins( std::vector< PluginContext< property_flags_t >* > plugins ) = 0 {
+        unsigned int num_plugins = 0;
+        for ( unsigned int ip = 0; ip < plugins.size(); ip++ ) {
+            PluginContext< property_flags_t >* plugin_ctx
+                = plugins.at(ip);
+            PluginCompositor< property_flags_t >* plugin
+                = new PluginCompositor< property_flags_t >( this, plugin_ctx );
+            plugin_map[plugin_ctx->name_plugin] = plugin;
+            ++num_plugins;
+        }
+        return num_plugins;
+    }
 
     // Send the plugin api to operate on the plugin context.
     virtual bool operate() {
-        return plugin_ctx->operate( this );
+        return plugin_api_ctx->operate( this );
+    }
+
+    virtual std::shared_future< property_flags_t* > finish_inform(
+          const std::string finish_strategy_name
+        , property_flags_t* property
+    ) {
+        PluginAPIStrategy< property_flags_t > api_strategy
+            = plugin_informant->get_strategy( finish_strategy_name );
+        return std::async( std::launch::async
+            , [property, api_strategy, plugin_api_ctx]{
+                api_strategy->start( plugin_api_ctx, property )
+            }
+        ).share();
     }
 
     virtual std::shared_future<property_flags_t*> inform( const std::string strategy_name
                                                         , property_flags_t* property
     ) {
+        // If informing other API plugins, do it pre `finish_inform()`-call
+
         std::shared_future< property_flags_t* > future
-            = plugin_informant->await_information( property, strategy_name );
+            = this->finish_inform( property, strategy_name );
         future.wait();
         if ( ! future.valid() ) {
             return std::shared_future<property_flags_t*>();

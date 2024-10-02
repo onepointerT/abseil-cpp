@@ -23,7 +23,6 @@ absl_cc_library(
     "strategy.h"
     "visitor.h"
   SRCS
-    "compositor.cc"
   COPTS
     ${ABSL_DEFAULT_COPTS} -std=c++23
   DEPS

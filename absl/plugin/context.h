@@ -20,6 +20,7 @@
 #ifndef ABSL_PLUGIN_CONTEXT_H_
 #define ABSL_PLUGIN_CONTEXT_H_
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 
@@ -50,12 +51,15 @@ template< typename property_flags_t >
 class PluginContext {
 protected:
     PluginVisitor< property_flags_t >* visitor;
+    PluginStrategy< property_flags_t >* strategy;
 
      // Choose strategy with visitor.
      // TODO: Implement virtual function.
     virtual bool operate_impl() {
         if ( this->visitor == nullptr ) {
             return false;
+        } else if ( strategy != nullptr ) {
+            return strategy->start( this->visitor, this );
         }
         return false;
     }
@@ -67,12 +71,23 @@ protected:
     }
 
 public:
+    typedef std::shared_ptr< PluginStrategy< property_flags_t > > strategy_ptr;
+
+    const std::string name_plugin;
+
+    strategy_ptr get_strategy() const {
+        return strategy_ptr( this->strategy );
+    }
+
     // Initialize a plugin context. The visitor will bring
     // every guess and properties that are allowed outside
     // of the main library inside a plugin. Please specify
     // these common parameters for your implementations.
-    PluginContext()
-        :   visitor( nullptr )
+    PluginContext( const std::string api_plugin_name
+                 , PluginStrategy< property_flags_t >* plugin_strategy = nullptr
+    )   :   visitor( nullptr )
+        ,   strategy( plugin_strategy )
+        ,   name_plugin( api_plugin_name )
     {}
 
     // Start to operate on and with a plugin with the plugin 
@@ -83,6 +98,7 @@ public:
         return this->operate_impl();
     }
 
+    friend class PluginStrategy< property_flags_t >;
     friend class PluginCompositor< property_flags_t >;
     friend class PluginAPI< property_flags_t >;
 };
@@ -95,9 +111,14 @@ class PluginContextQueue
     ,   public FlagQueue< property_flags_t >
 {
 public:
-    PluginContextQueue()
-        :   PluginContext< property_flags_t >()
+    PluginContextQueue(const std::string api_plugin_name
+                      , PluginStrategy< property_flags_t >* plugin_strategy = nullptr )
+        :   PluginContext< property_flags_t >( api_plugin_name, plugin_strategy )
         ,   FlagQueue< property_flags_t >()
+    {}
+    PluginContextQueue( PluginContext< property_flags_t >* plugin_ctx_impl )
+        :   PluginContext< property_flags_t >( plugin_ctx_impl )
+        ,   FlagsQueue< property_flags_t >()
     {}
 
     // Start to operate on and with a plugin with the plugin 
