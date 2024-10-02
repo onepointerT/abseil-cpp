@@ -28,6 +28,7 @@
 #include "absl/icmp/icmp_inlining.h"
 #include "absl/icmp/icmp_text.h"
 #include "absl/plugin/compositor.h"
+#include "absl/plugin/peers.h"
 
 
 namespace absl {
@@ -43,6 +44,7 @@ class IcmpConcludant;
 template< class peer_t >
 class IcmpPeering
     :   public PluginBase< peer_t >
+    ,   public PluginPeering< peer_t >
 {
 protected:
     IcmpPeering();

@@ -28,6 +28,7 @@
 #include "absl/icmp/icmp_peering.h"
 #include "absl/icmp/icmp_inlining.h"
 #include "absl/icmp/icmp_text.h"
+#include "absl/plugin/peers.h"
 #include "absl/plugin/visitor.h"
 
 
@@ -44,7 +45,7 @@ class IcmpPeeringStrategizer;*/
 
 class IcmpPeer
     :   public FlagQueue< IcmpProperties >
-    ,   public absl::PluginVisitor< IcmpProperties >
+    ,   public PluginPeer< IcmpProperties >
 {
 protected:
     static std::future< const absl::string_view > await_answer( IcmpProperties* awaiter );
@@ -59,7 +60,7 @@ public:
     virtual IcmpProperties* getPropertyByTextID( const UUID& textid ) final;
     virtual IcmpProperties* getPropertyByGuessID( const UUID& guessid ) final;
 
-    virtual const absl::string_view guess( const UUID guessid );
+    virtual const absl::string_view guess_icmp( const UUID guessid );
 
     /* IMPL declarations, pure-virtual or virtual, however for friend class IcmpPeering */
     friend class IcmpPeering< IcmpPeer >;

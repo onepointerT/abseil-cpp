@@ -49,8 +49,9 @@ protected:
     virtual property_flags_t* let_peer_answer( property_flags_t* property
                                 , PluginPeer< property_flags_t >* peer ) {
         std::future< property_flags_t > future
-            = std::async(std::launch::async, [property,this,peer]{
+            = std::async(std::launch::async, [property, peer]{
                 peer->guess( "peer_answer", property );
+
             });
         future.wait();
         return future.get();
@@ -79,7 +80,7 @@ class PluginPeer
 public:
     PluginPeer();
 
-    virtual property_flags_t* guess( const std::string strategy_name,
+    virtual property_flags_t* guess( const std::string strategy_name
                                    , property_flags_t* property
     ) {
         std::future< property_flags_t > future
@@ -91,7 +92,7 @@ public:
         return future.get();
     }
 
-    virtual const bool visited( property_flags_t* property, PluginPeering< property_flags_t >* peering ) {
+    virtual bool visited_peers( property_flags_t* property, PluginPeering< PluginPeer< property_flags_t > >* peering ) {
         property_flags_t* property_flags = this->guess( property );
         if ( property_flags != nullptr ) {
             peering->inform_me( property_flags );
