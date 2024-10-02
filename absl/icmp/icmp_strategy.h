@@ -33,6 +33,9 @@ namespace absl {
 ABSL_NAMESPACE_BEGIN
 
 
+typedef PluginStrategy< IcmpProperties > IcmpStrategy;
+
+/*
 template< class DerivedT >
 class IcmpStrategy
     :   public PluginStrategy< IcmpProperties >
@@ -54,7 +57,7 @@ public:
 
         return DerivedT::start( visitor, ctx );
     }
-};
+};*/
 
 
 
@@ -84,12 +87,6 @@ public:
     using std::map< absl::string_view, PluginStrategy< IcmpProperties >* >::clear;
     using std::map< absl::string_view, PluginStrategy< IcmpProperties >* >::size;
 };
-
-
-//#define icmps IcmpStrategizerMap::get()
-//#define icmps_register IcmpStrategizerMap::get()->register
-//#define icmps_register_strategy(sname, strategy) IcmpStrategizerMap::get()->operator[sname] = strategy;
-//#define icmps_register_strategy(sname) IcmpStrategizerMap::get()->operator[sname]
 
 
 

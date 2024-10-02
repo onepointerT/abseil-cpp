@@ -54,7 +54,7 @@ bool IcmpText::operate_impl() {
 
 IcmpText::IcmpText( const std::string text )
     :   IcmpStringView( text )
-    ,   absl::PluginContextQueue< IcmpProperties >()
+    ,   absl::PluginContextQueue< IcmpProperties >("icmp_text")
     ,   m_visitor()
     ,   m_gaps()
     ,   own_id()

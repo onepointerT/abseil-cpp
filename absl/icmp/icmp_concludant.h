@@ -26,8 +26,11 @@
 #include "absl/base/config.h"
 #include "absl/icmp/icmp_inlining.h"
 #include "absl/icmp/icmp_peering.h"
+#include "absl/icmp/icmp_strategy.h"
 #include "absl/icmp/icmp_text.h"
 #include "absl/plugin/api.h"
+#include "absl/plugin/context.h"
+#include "absl/plugin/strategy.h"
 
 
 namespace absl {
@@ -37,9 +40,15 @@ template< class peer_t >
 class IcmpConcludant;
 
 
-class IcmpAPI final {
+class IcmpAPI
+    :   PluginContext< IcmpProperties >
+{
 public:
-    bool plugin();
+    IcmpAPI( const std::string plugin_name )
+        :   PluginContext< IcmpProperties >( plugin_name )
+    {}
+
+    bool is_plugin( const std::string plugin_name );
 
     template< class peer_t >
     friend class IcmpConcludant;
@@ -47,8 +56,8 @@ public:
 
 
 template< class peer_t = IcmpPeer >
-class IcmpConcludant
-    :   public PluginAPI< IcmpProperties >
+class IcmpConcludant final
+    :   public PluginAPI< peer_t >
     ,   public absl::Singleton< IcmpConcludant< peer_t > >
 {
 private:
@@ -56,16 +65,20 @@ private:
 
 protected:
     peer_t* m_peer;
+    IcmpPeering< peer_t >* m_peering;
 
 
     
 public:
-    IcmpConcludant();
-    //virtual ~IcmpConcludant() = delete;
-    // TODO/IMPL: Plugin own strategies and choose them
-    //bool plugin( const IcmpPeeringStrategy< peer_t >* peering_strategy_plugin );
-    virtual unsigned int load_plugins() { return 0; }
+    IcmpConcludant()
+        :   PluginAPI< peer_t >(new IcmpPeering< peer_t >())
+        ,   absl::Singleton< IcmpConcludant< peer_t > >()
+        ,   m_peering( (IcmpPeering<peer_t>*)this->plugin_api_ctx )
+    {}
 
+    IcmpStrategy* strategy( const std::string plugin_name ) const;
+    IcmpStrategizerMap* strategies() const;
+    
     void make_peer_unique( peer_t* peer );
 
     const absl::string_view inform_guesser(); // TODO: peer.guess;

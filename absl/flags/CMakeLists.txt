@@ -204,6 +204,7 @@ absl_cc_library(
   HDRS
     "declare.h"
     "flag.h"
+    "flag_queue.h"
   COPTS
     ${ABSL_DEFAULT_COPTS}
   LINKOPTS

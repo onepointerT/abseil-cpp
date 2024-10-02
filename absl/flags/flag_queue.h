@@ -17,59 +17,41 @@
 // Please inherit from those classes here.
 //
 
-#ifndef ABSL_ICMP_ICMP_STRATEGIES_H_
-#define ABSL_ICMP_ICMP_STRATEGIES_H_
+#ifndef ABSL_FLAGS_FLAGQUEUE_H_
+#define ABSL_FLAGS_FLAGQUEUE_H_
 
-#include <map>
+#include <vector>
 
-#include "absl/base/config.h"
-#include "absl/icmp/icmp_strategy.h"
 
 namespace absl {
 ABSL_NAMESPACE_BEGIN
 
 
-class IcmpStrategyGapFilling
-    :   public IcmpStrategy
-{
-protected:
 
-
-public:
-    IcmpStrategyGapFilling();
-
-    virtual bool start( PluginVisitor< IcmpProperties >* visitor
-                      , PluginContext< IcmpProperties >* ctx
-    );
-};
-
-
-class IcmpStrategyGapPositioning
-    :   public IcmpStrategy
-{
-protected:
-
-
-public:
-    IcmpStrategyGapPositioning();
-
-    virtual bool start( PluginVisitor< IcmpProperties >* visitor
-                      , PluginContext< IcmpProperties >* ctx
-    );
-};
-
-
-
-class IcmpStrategyAPI
-    :   public PluginAPIStrategy< IcmpProperties >
+template< typename flags_t >
+class FlagQueue 
+    :   public std::vector< flags_t* >
 {
 public:
-    virtual IcmpProperties* start( IcmpProperties* properties );
-};
+    FlagQueue()
+        :   std::vector< flags_t* >()
+    {}
 
+    // Push a flags_t object inside the queue
+    virtual void push( flags_t* flags ) {
+        this->emplace_back( flags );
+    }
+
+    // Get the most top flags_t object from the queue
+    flags_t* pop() {
+        flags_t* elem = this->at(0);
+        this->erase(this->begin());
+        return elem;
+    }
+};
 
 
 ABSL_NAMESPACE_END
 }  // namespace absl
 
-#endif  // ABSL_ICMP_ICMP_STRATEGIES_H_
+#endif  // ABSL_FLAGS_FLAGQUEUE_H_

@@ -107,7 +107,7 @@ public:
         ,   m_plugin_context( nullptr )
     {}
 
-    virtual property_flags_t* start( property_flags_t* properties ) = 0; /*{
+    virtual property_flags_t* start( property_flags_t* properties ) {
         // Do things with the plugin's base lib `m_myLib_iam_plugged_into`
         // Find plugin strategies and operate upon the context with the own properties
         // Finally call `operate` upon the plugin's own context
@@ -115,7 +115,7 @@ public:
             return properties;
         }
         return nullptr;
-    }*/
+    }
 };
 
 

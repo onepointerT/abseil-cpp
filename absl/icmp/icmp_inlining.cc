@@ -53,8 +53,9 @@ void IcmpProperties::fill_gap() {
 IcmpProperties* IcmpProperties::visit() {
     switch ( status ) {
     case Status::New: {
-        const absl::string_view sv
-            = IcmpConcludant<>::get()->inform_guesser();
+        
+        const absl::string_view sv = "TODO";
+            //= IcmpConcludant<>::get()->inform_guesser();
 
         if ( sv.length() > 0 ) {
             gap_text.replaceAll( sv );
@@ -64,7 +65,7 @@ IcmpProperties* IcmpProperties::visit() {
         
     } case Status::Guessed: {
         
-        IcmpPeer* peer = new IcmpPeer();
+        //IcmpPeer* peer = new IcmpPeer();
 
         // Guess merge type
         

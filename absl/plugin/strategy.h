@@ -35,6 +35,7 @@ template< typename property_flags_t >
 class PluginStrategy {
 public:
     PluginStrategy() {}
+    virtual ~PluginStrategy() {}
 
     // Start the strategy with a visitor or hand in the context aswell.
     virtual bool start( PluginVisitor< property_flags_t >* visitor

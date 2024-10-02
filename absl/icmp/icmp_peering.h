@@ -27,6 +27,7 @@
 #include "absl/base/config.h"
 #include "absl/icmp/icmp_inlining.h"
 #include "absl/icmp/icmp_text.h"
+#include "absl/plugin/compositor.h"
 
 
 namespace absl {
@@ -34,13 +35,20 @@ ABSL_NAMESPACE_BEGIN
 
 
 class IcmpPeer;
+template< class peer_t >
+class IcmpConcludant;
 
 
 /* Forward-declaration */
 template< class peer_t >
-class IcmpPeering {
+class IcmpPeering
+    :   public PluginBase< peer_t >
+{
 protected:
-    
+    IcmpPeering();
+
+    friend class IcmpPeer;
+    friend class IcmpConcludant< peer_t >;
 
 public:
     

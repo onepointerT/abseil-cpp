@@ -64,9 +64,15 @@ public:
         ,   plugin_api_ctx( new PluginContext< property_flags_t >(name) )
         ,   plugin_map()
     {}
+    PluginAPI( PluginBase< property_flags_t >* plugin_base )
+        :   PluginBase< property_flags_t >( plugin_base, plugin_base->name_plugin )
+        ,   PluginVisitor< property_flags_t >()
+        ,   plugin_api_ctx( plugin_base )
+        ,   plugin_map()
+    {}
 
     // Register a plugin implementation
-    virtual bool plugin_add( const PluginContext< property_flags_t >* plugin_ctx ) {
+    virtual bool plugin_add( PluginContext< property_flags_t >* plugin_ctx ) {
         if ( plugin_ctx == nullptr ) {
             return false;
         }
@@ -75,7 +81,7 @@ public:
     }
 
     // Load from config, directory, loaded plugin library and its compositors or similar.
-    virtual unsigned int load_plugins( std::vector< PluginContext< property_flags_t >* > plugins ) = 0 {
+    virtual unsigned int load_plugins( std::vector< PluginContext< property_flags_t >* > plugins ) {
         unsigned int num_plugins = 0;
         for ( unsigned int ip = 0; ip < plugins.size(); ip++ ) {
             PluginContext< property_flags_t >* plugin_ctx
@@ -89,7 +95,7 @@ public:
     }
 
     // Send the plugin api to operate on the plugin context.
-    virtual bool operate() {
+    virtual bool operate_api() {
         return plugin_api_ctx->operate( this );
     }
 
@@ -97,11 +103,13 @@ public:
           const std::string finish_strategy_name
         , property_flags_t* property
     ) {
-        PluginAPIStrategy< property_flags_t > api_strategy
+        PluginAPIStrategy< property_flags_t >* api_strategy
             = plugin_informant->get_strategy( finish_strategy_name );
         return std::async( std::launch::async
-            , [property, api_strategy, plugin_api_ctx]{
-                api_strategy->start( plugin_api_ctx, property )
+            , [&, property, api_strategy]{
+                api_strategy->start( property );
+                this->plugin_api_ctx->operate( property );
+                return property;
             }
         ).share();
     }
@@ -112,7 +120,7 @@ public:
         // If informing other API plugins, do it pre `finish_inform()`-call
 
         std::shared_future< property_flags_t* > future
-            = this->finish_inform( property, strategy_name );
+            = this->finish_inform( strategy_name, property );
         future.wait();
         if ( ! future.valid() ) {
             return std::shared_future<property_flags_t*>();
