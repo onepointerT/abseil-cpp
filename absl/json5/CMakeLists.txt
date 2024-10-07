@@ -25,6 +25,7 @@ absl_cc_library(
     "json5_reflect.h"
     "json5_streams.h"
     "json5.h"
+    "json6vars.h"
   SRCS
     "json5_builder.cc"
     "json5_input.cc"
@@ -32,6 +33,7 @@ absl_cc_library(
     "json5_reflect.cc"
     "json5_streams.cc"
     "json5.cc"
+    "json6vars.cc"
   COPTS
     ${ABSL_DEFAULT_COPTS} -std=c++23
   DEPS
