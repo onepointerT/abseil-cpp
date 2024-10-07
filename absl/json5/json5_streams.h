@@ -1,0 +1,50 @@
+#pragma once
+
+#include "absl/json5/json5_input.h"
+#include "absl/json5/json5_reflect.h"
+
+#include <fstream>
+
+namespace json5 {
+
+// Write json5::document into file, returns 'true' on success
+bool to_file( string_view fileName, const document &doc, const writer_params &wp = writer_params() );
+
+// Serialize instance of type 'T' into file
+template <typename T> bool to_file( string_view fileName, const T &in, const writer_params &wp = writer_params() );
+
+// Parse json5::document from file
+error from_file( string_view fileName, document &doc );
+
+// Initialize instance of type 'T' from file
+template <typename T> error from_file( string_view fileName, T &out );
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//---------------------------------------------------------------------------------------------------------------------
+template <typename T>
+inline bool to_file( string_view fileName, const T &in, const writer_params &wp )
+{
+	std::ofstream ofs( string( fileName ).c_str() );
+	if ( !ofs.is_open() )
+		return false;
+
+	document doc;
+	to_document( doc, in, wp );
+
+	ofs << to_string( doc );
+	return true;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+template <typename T>
+inline error from_file( string_view fileName, T &out )
+{
+	document doc;
+	if ( auto err = from_file( fileName, doc ) )
+		return err;
+
+	return from_document( doc, out );
+}
+
+} // namespace json5
