@@ -111,6 +111,19 @@ absl_cc_test(
 
 absl_cc_library(
   NAME
+    function_arguments
+  SRCS
+  HDRS
+    "function_arguments.h"
+  COPTS
+    ${ABSL_DEFAULT_COPTS}
+  DEPS
+    absl::config
+  PUBLIC
+)
+
+absl_cc_library(
+  NAME
     overload
   HDRS
     "overload.h"

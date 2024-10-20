@@ -17,42 +17,41 @@
 // Please inherit from those classes here.
 //
 
-#ifndef ABSL_ICMP_ICMP_STRATEGY_H_
-#define ABSL_ICMP_ICMP_STRATEGY_H_
+#ifndef ABSL_EVENTS_EVENTQUEUE_H_
+#define ABSL_EVENTS_EVENTQUEUE_H_
 
-#include <map>
+#include <initializer_list>
+#include <string>
+#include <utility>
+#include <variant>
 
 #include "absl/base/config.h"
-#include "absl/base/singleton.h"
-#include "absl/icmp/icmp_inlining.h"
-#include "absl/plugin/context.h"
-#include "absl/plugin/strategy.h"
-#include "absl/plugin/strategies.h"
-#include "absl/strings/string_view.h"
+#include "absl/functional/function_arguments.h"
 
 namespace absl {
 ABSL_NAMESPACE_BEGIN
 
-class IcmpPeer;
-typedef PluginStrategy< IcmpProperties > IcmpStrategy;
-typedef PluginStrategy< IcmpPeer > IcmpPeerStrategy;
+
+template< typename base_cls_t >
+class EventObject;
 
 
-class IcmpStrategizerMap final
-    :   public PluginStrategizerMap< IcmpStrategy >
+template< typename ...il_t >
+using event_element = std::variant< il_t... >;
+
+template< typename ...il_t >
+using event_queue = std::tuple< std::initializer_list<event_element<il_t...>> >;
+
+
+template< typename base_cls_t, typename ...il_t >
+class EventQueue
+    :   protected event_queue<il_t...>
 {
 protected:
-
+    friend class EventObject<base_cls_t>;
 };
-
-
-class IcmpPeerStrategizerMap final
-    :   public PluginStrategizerMap< IcmpPeerStrategy >
-{};
-
-
 
 ABSL_NAMESPACE_END
 }  // namespace absl
 
-#endif  // ABSL_ICMP_ICMP_STRATEGY_H_
+#endif  // ABSL_EVENTS_EVENTQUEUE_H_

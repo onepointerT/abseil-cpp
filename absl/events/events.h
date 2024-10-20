@@ -17,42 +17,20 @@
 // Please inherit from those classes here.
 //
 
-#ifndef ABSL_ICMP_ICMP_STRATEGY_H_
-#define ABSL_ICMP_ICMP_STRATEGY_H_
+#ifndef ABSL_EVENTS_EVENTS_H_
+#define ABSL_EVENTS_EVENTS_H_
 
-#include <map>
+
 
 #include "absl/base/config.h"
-#include "absl/base/singleton.h"
-#include "absl/icmp/icmp_inlining.h"
-#include "absl/plugin/context.h"
-#include "absl/plugin/strategy.h"
-#include "absl/plugin/strategies.h"
-#include "absl/strings/string_view.h"
+#include "absl/events/eventmap.h"
 
 namespace absl {
 ABSL_NAMESPACE_BEGIN
-
-class IcmpPeer;
-typedef PluginStrategy< IcmpProperties > IcmpStrategy;
-typedef PluginStrategy< IcmpPeer > IcmpPeerStrategy;
-
-
-class IcmpStrategizerMap final
-    :   public PluginStrategizerMap< IcmpStrategy >
-{
-protected:
-
-};
-
-
-class IcmpPeerStrategizerMap final
-    :   public PluginStrategizerMap< IcmpPeerStrategy >
-{};
 
 
 
 ABSL_NAMESPACE_END
 }  // namespace absl
 
-#endif  // ABSL_ICMP_ICMP_STRATEGY_H_
+#endif  // ABSL_EVENTS_EVENTS_H_
