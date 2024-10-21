@@ -245,6 +245,35 @@ absl_cc_test(
 
 absl_cc_library(
   NAME
+    type_dynamic
+  HDRS
+    "type_dynamic.h"
+  SRCS
+  COPTS
+    ${ABSL_DEFAULT_COPTS}
+  DEPS
+    absl::any
+    absl::config
+  PUBLIC
+)
+
+absl_cc_library(
+  NAME
+    variant_dynamic
+  HDRS
+    "variant_dynamic.h"
+  SRCS
+  COPTS
+    ${ABSL_DEFAULT_COPTS}
+  DEPS
+    absl::variadic_identity
+    absl::config
+    absl::type_dynamic
+  PUBLIC
+)
+
+absl_cc_library(
+  NAME
     variant
   HDRS
     "variant.h"
