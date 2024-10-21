@@ -19,7 +19,7 @@
 #ifndef ABSL_TYPES_TYPE_DYNAMIC_H_
 #define ABSL_TYPES_TYPE_DYNAMIC_H_
 
-
+#include <variant>
 
 #include "absl/base/config.h"
 #include "absl/types/any.h"
