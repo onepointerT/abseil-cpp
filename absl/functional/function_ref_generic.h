@@ -1,4 +1,4 @@
-// Copyright 2019 The Abseil Authors.
+// Copyright 2024 The Abseil Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 // limitations under the License.
 //
 // -----------------------------------------------------------------------------
-// File: function_ref.h
+// File: function_ref_generic.h
 // -----------------------------------------------------------------------------
 //
 // This header file defines the `absl::FunctionRef` type for holding a
@@ -24,52 +24,43 @@
 // practices of other non-owning reference-like objects (such as
 // `absl::string_view`) apply here.
 //
-//  An `absl::FunctionRef` is similar in usage to a `std::function` but has the
+//  An `absl::FunctionRefGeneric` is similar in usage to a `absl::FunctionRef` but has the
 //  following differences:
 //
-//  * It doesn't own the underlying object.
-//  * It doesn't have a null or empty state.
-//  * It never performs deep copies or allocations.
-//  * It's much faster and cheaper to construct.
-//  * It's trivially copyable and destructable.
+//  * It doesn't have to know the function's arguments before compile time.
+//  * It doesn't have a per-parameter-combinational type
+//  * It is usable with `absl::FunctionArgumentsAny` and `std::tuple<...>`
 //
-// Generally, `absl::FunctionRef` should not be used as a return value, data
+// Generally, `absl::FunctionRefGeneric` should not be used as a return value, data
 // member, or to initialize a `std::function`. Such usages will often lead to
 // problematic lifetime issues. Once you convert something to an
-// `absl::FunctionRef` you cannot make a deep copy later.
+// `absl::FunctionRefGeneric` you cannot make a deep copy later.
 //
 // This class is suitable for use wherever a "const std::function<>&"
 // would be used without making a copy. ForEach functions and other versions of
 // the visitor pattern are a good example of when this class should be used.
 //
 // This class is trivial to copy and should be passed by value.
-#ifndef ABSL_FUNCTIONAL_FUNCTION_REF_H_
-#define ABSL_FUNCTIONAL_FUNCTION_REF_H_
+#ifndef ABSL_FUNCTIONAL_FUNCTION_REF_GENERIC_H_
+#define ABSL_FUNCTIONAL_FUNCTION_REF_GENERIC_H_
 
 #include <cassert>
 #include <functional>
 #include <type_traits>
 
-#include "absl/base/attributes.h"
-#include "absl/functional/internal/function_ref.h"
-#include "absl/meta/type_traits.h"
+#include "absl/functional/function_arguments_any.h"
+#include "absl/functional/function_ref.h"
 
 namespace absl {
 ABSL_NAMESPACE_BEGIN
 
-// FunctionRef
-//
-// Dummy class declaration to allow the partial specialization based on function
-// types below.
-template <typename T>
-class FunctionRef;
 
 // FunctionRef
 //
-// An `absl::FunctionRef` is a lightweight wrapper to any invocable object with
-// a compatible signature. Generally, an `absl::FunctionRef` should only be used
+// An `absl::FunctionRefGeneric` is a lightweight wrapper to any invocable object with
+// a compatible signature. Generally, an `absl::FunctionRefGeneric` should only be used
 // as an argument type and should be preferred as an argument over a const
-// reference to a `std::function`. `absl::FunctionRef` itself does not allocate,
+// reference to a `std::function`. `absl::FunctionRefGeneric` itself does not allocate,
 // although the wrapped invocable may.
 //
 // Example:
@@ -83,15 +74,21 @@ class FunctionRef;
 //   bool Visitor(absl::FunctionRef<void(my_proto&, absl::string_view)>
 //                  callback);
 //
-// Note: the assignment operator within an `absl::FunctionRef` is intentionally
-// deleted to prevent misuse; because the `absl::FunctionRef` does not own the
+// Note: the assignment operator within an `absl::FunctionRefGeneric` is intentionally
+// deleted to prevent misuse; because the `absl::FunctionRefGeneric` does not own the
 // underlying type, assignment likely indicates misuse.
-template <typename R, typename... Args>
-class FunctionRef<R(Args...)> {
+template <typename R>
+class FunctionRefGeneric
+{
 public:
+  template< typename ...Args >
   using func_t = R (*)(Args...);
+  template< typename ...Args >
+  using funcref_t = FunctionRef<R(Args...)>;
 
- private:
+private:
+  std::any* func_ref_arguments;
+
   // Used to disable constructors for objects that are not compatible with the
   // signature of this FunctionRef.
   template <typename F,
@@ -101,18 +98,23 @@ public:
                               std::is_convertible<FR, R>::value>::type;
 
  public:
-  // Constructs a FunctionRef from any invocable type.
-  template <typename F, typename = EnableIfCompatible<const F&>>
-  // NOLINTNEXTLINE(runtime/explicit)
-  FunctionRef(const F& f ABSL_ATTRIBUTE_LIFETIME_BOUND)
+  // Constructs a FunctionRefGeneric from any invocable type.
+  template <typename F, typename ...Args >
+  FunctionRefGeneric( R (*f)(FunctionArgumentsAny*) ABSL_ATTRIBUTE_LIFETIME_BOUND)
       : invoker_(&absl::functional_internal::InvokeObject<F, R, Args...>) {
     absl::functional_internal::AssertNonNull(f);
     ptr_.obj = &f;
   }
-  // Constructs a FunctionRef from any invocable type.
-  template <typename F, typename = EnableIfCompatible<const F&>>
-  // NOLINTNEXTLINE(runtime/explicit)
-  FunctionRef(func_t f ABSL_ATTRIBUTE_LIFETIME_BOUND)
+  // Constructs a FunctionRefGeneric from any invocable type.
+  template <typename F, typename ...Args >
+  FunctionRefGeneric( R (*f)(FunctionArgumentsAny) ABSL_ATTRIBUTE_LIFETIME_BOUND)
+      : invoker_(&absl::functional_internal::InvokeObject<F, R, Args...>) {
+    absl::functional_internal::AssertNonNull(f);
+    ptr_.obj = &f;
+  }
+  // Constructs a FunctionRefGeneric from any invocable type.
+  template <typename F, typename ...Args >
+  FunctionRefGeneric( R (*f)(Args...) ABSL_ATTRIBUTE_LIFETIME_BOUND)
       : invoker_(&absl::functional_internal::InvokeObject<F, R, Args...>) {
     absl::functional_internal::AssertNonNull(f);
     ptr_.obj = &f;
@@ -135,12 +137,28 @@ public:
 
   // To help prevent subtle lifetime bugs, FunctionRef is not assignable.
   // Typically, it should only be used as an argument type.
-  FunctionRef& operator=(const FunctionRef& rhs) = delete;
-  FunctionRef(const FunctionRef& rhs) = default;
+  FunctionRefGeneric& operator=(const FunctionRefGeneric& rhs) = delete;
+  FunctionRefGeneric(const FunctionRefGeneric& rhs) = default;
 
   // Call the underlying object.
+  template< typename ...Args >
   R operator()(Args... args) const {
     return invoker_(ptr_, std::forward<Args>(args)...);
+  }
+  // Call the underlying object.
+  template< typename ...Args >
+  R operator()(std::tuple<Args...> args) const {
+    return invoker_(ptr_, std::forward<Args...>(args));
+  }
+  // Call the underlying object.
+  template< typename ...Args >
+  R operator()(FunctionArgumentsAny args) const {
+    return operator()(args.getall_tuple());
+  }
+  // Call the underlying object.
+  template< typename ...Args >
+  R operator()(FunctionArgumentsAny* args) const {
+    return operator()(args->getall_tuple());
   }
 
  private:
@@ -148,15 +166,7 @@ public:
   absl::functional_internal::Invoker<R, Args...> invoker_;
 };
 
-// Allow const qualified function signatures. Since FunctionRef requires
-// constness anyway we can just make this a no-op.
-template <typename R, typename... Args>
-class FunctionRef<R(Args...) const> : public FunctionRef<R(Args...)> {
- public:
-  using FunctionRef<R(Args...)>::FunctionRef;
-};
-
 ABSL_NAMESPACE_END
 }  // namespace absl
 
-#endif  // ABSL_FUNCTIONAL_FUNCTION_REF_H_
+#endif  // ABSL_FUNCTIONAL_FUNCTION_REF_GENERIC_H_

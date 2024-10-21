@@ -35,7 +35,7 @@ ABSL_NAMESPACE_BEGIN
 
 class VariadicIdentity {
 
-    std::identity value;
+    std::identity* value;
 public:
     template< typename il_t, typename ...Types >
     VariadicIdentity( std::initializer_list<il_t> il = {} )
@@ -53,7 +53,7 @@ public:
     }
 
     std::identity get() const {
-        return std::identity(this->value);
+        return *this->value;
     }
 
     template< typename ...Types >

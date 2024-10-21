@@ -119,6 +119,38 @@ absl_cc_library(
     ${ABSL_DEFAULT_COPTS}
   DEPS
     absl::config
+    absl::variadic_identity
+  PUBLIC
+)
+
+absl_cc_library(
+  NAME
+    function_arguments_any
+  SRCS
+  HDRS
+    "function_arguments_any.h"
+  COPTS
+    ${ABSL_DEFAULT_COPTS}
+  DEPS
+    absl::any
+    absl::config
+    absl::function_arguments
+  PUBLIC
+)
+
+absl_cc_library(
+  NAME
+    function_ref_generic
+  SRCS
+  HDRS
+    "function_ref_generic.h"
+  COPTS
+    ${ABSL_DEFAULT_COPTS}
+  DEPS
+    absl::any
+    absl::config
+    absl::function_arguments_any
+    absl::function_ref
   PUBLIC
 )
 

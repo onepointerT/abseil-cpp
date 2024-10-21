@@ -187,6 +187,19 @@ absl_cc_library(
 
 absl_cc_library(
   NAME
+    variadic_identity
+  HDRS
+    "variadic_identity.h"
+  SRCS
+  COPTS
+    ${ABSL_DEFAULT_COPTS}
+  DEPS
+    absl::config
+  PUBLIC
+)
+
+absl_cc_library(
+  NAME
     core_headers
   HDRS
     "attributes.h"
